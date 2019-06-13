@@ -1,0 +1,181 @@
+<html>
+<head>
+	<title>Guitar Scales</title>
+
+<style>
+.LayeredCanvas{
+	position:absolute;
+	left:0px;
+	top:0px;
+}
+#bottomCanvas{
+	z-index:0;
+}
+#middleCanvas{
+	z-index:1;
+}
+#topCanvas{
+	z-index:2;
+}
+#controls {
+	position:absolute;
+}
+#output {
+	width: 100%;
+	text-align: center;
+	font-weight: bold;
+}
+</style>
+</head>
+<body>
+	<canvas id="bottomCanvas" class="LayeredCanvas"></canvas>
+	<canvas id="middleCanvas" class="LayeredCanvas"></canvas>
+	<canvas id="topCanvas" class="LayeredCanvas"></canvas>
+
+	<div id="controls">
+		<div><input type="checkbox" id="lefty"/> lefty</div>
+		<div>
+			Scale Root:
+			<select id="root">
+				<option value="0">A</option>
+				<option value="1">A#/Bb</option>
+				<option value="2">B</option>
+				<option value="3">C</option>
+				<option value="4">C#/Db</option>
+				<option value="5">D</option>
+				<option value="6">D#/Eb</option>
+				<option value="7">E</option>
+				<option value="8">F</option>
+				<option value="9">F#/Gb</option>
+				<option value="10">G</option>
+				<option value="11">G#/Ab</option>
+			</select>
+		</div>
+		<div>
+			<input type="checkbox" id="0"/> 1
+			<input type="checkbox" id="1"/> #1/b2
+			<input type="checkbox" id="2"/> 2
+			<input type="checkbox" id="3"/> #2/b3
+			<input type="checkbox" id="4"/> 3
+			<input type="checkbox" id="5"/> 4
+			<input type="checkbox" id="6"/> #4/b5
+			<input type="checkbox" id="7"/> 5
+			<input type="checkbox" id="8"/> #5/b6
+			<input type="checkbox" id="9"/> 6
+			<input type="checkbox" id="10"/> #6/b7
+			<input type="checkbox" id="11"/> 7
+		</div>
+		<div id="output"></div>
+	</div>
+
+
+<script src="js/strat.js"></script>
+<script src="js/pixelguitar.js"></script>
+<script>
+	var topCanvas = document.getElementById("topCanvas");
+	var middleCanvas = document.getElementById("middleCanvas");
+	var bottomCanvas = document.getElementById("bottomCanvas");
+
+	var controls = document.getElementById("controls");
+
+	var topCtx = topCanvas.getContext("2d");
+	var middleCtx = middleCanvas.getContext("2d");
+	var bottomCtx = bottomCanvas.getContext("2d");
+
+	guitar.setSpecs(guitarSpecs);
+
+	window.addEventListener("resize", resize);
+	document.getElementById("lefty").addEventListener('change', resize);
+
+	document.getElementById("root").addEventListener('change', updateScale);
+
+	for(var interval = 0; interval < chromatic.length; interval++) {
+		document.getElementById(interval).addEventListener('change', updateScale);
+	}
+
+	function resize() {
+		var topCanvas = document.getElementById("topCanvas");
+		var middleCanvas = document.getElementById("middleCanvas");
+		var bottomCanvas = document.getElementById("bottomCanvas");
+
+		var topCtx = topCanvas.getContext("2d");
+		var middleCtx = middleCanvas.getContext("2d");
+		var bottomCtx = bottomCanvas.getContext("2d");
+
+		topCanvas.width = window.innerWidth;
+		topCanvas.height = window.innerHeight / 2;
+		middleCanvas.width = window.innerWidth;
+		middleCanvas.height = window.innerHeight / 2;
+		bottomCanvas.width = window.innerWidth;
+		bottomCanvas.height = window.innerHeight / 2;
+
+		if(document.getElementById("lefty").checked) {
+			topCtx.transform(-1, 0, 0, 1, topCanvas.width, 0)
+			middleCtx.transform(-1, 0, 0, 1, middleCanvas.width, 0)
+			bottomCtx.transform(-1, 0, 0, 1, bottomCanvas.width, 0)
+		}
+
+		controls.style.width = (window.innerWidth - 20) + "px";
+		controls.style.top = (window.innerHeight / 2) + "px";
+
+		guitar.updateSize();
+		guitar.drawStructure();
+		guitar.drawStrings([]);
+		guitar.drawBlockedFrets([]);
+	}
+	resize();
+
+	function updateScale() {
+		var rootDropdown = document.getElementById("root");
+		var rootToneIndex = parseInt(rootDropdown.options[rootDropdown.selectedIndex].value);
+
+		var selectedIntervals = [];
+		var scaleString = "";
+		for(var interval = 0; interval < chromatic.length; interval++) {
+			if(document.getElementById(interval).checked) {
+				var shiftedInterval = (rootToneIndex + interval) % chromatic.length;
+				selectedIntervals.push(shiftedInterval);
+				var tone = chromatic[shiftedInterval];
+				if(tone.length > 1) {
+					tone = "("+tone+")";
+				}
+				scaleString += tone + "; ";
+			}
+		}
+
+		var output =  document.getElementById("output");
+		if(selectedIntervals.length == 0) {
+			output.innerHTML = "";
+		} else {
+			output.innerHTML = "Current scale contains: " + scaleString.substring(0, scaleString.length-2);
+		}
+
+		for(var string = 0; string < strings.length; string++) {
+			var stringTone = stringToChromatic[string];
+			for(var fret = 0; fret < guitarSpecs.nFrets; fret++) {
+				var highlight = false;
+				for(var i = 0; i < selectedIntervals.length; i++) {
+					if(((stringTone + fret) % chromatic.length) == selectedIntervals[i]) {
+						highlight = true;
+						break;
+					}
+				}
+				if(highlight) {
+					topCtx.fillStyle = "#FF0000";
+				} else {
+					topCtx.fillStyle = "#0000FF";
+				}
+				topCtx.beginPath();
+				topCtx.arc(guitar.fretXs[fret], guitar.stringYs[string], guitar.inlaySize, 0, 2 * Math.PI, false);
+				topCtx.fill();
+			}
+		}
+
+
+	}
+
+</script>
+
+
+</body>
+</html>
